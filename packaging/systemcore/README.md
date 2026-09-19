@@ -44,7 +44,7 @@ SYSTEMCORE_KERNEL_RELEASE='<exact uname -r output>' \
 The host needs the build dependencies listed in Limelight's kernel Dockerfile,
 plus Python 3 and pkg-config. The supplied `configure` script is used directly;
 autotools regeneration is unnecessary. The SDK compiler itself requires Linux;
-on macOS use a Linux VM or an appropriately configured Linux container with the
+on macOS/Windows use a Linux VM or an appropriately configured Linux container with the
 SDK's supported host architecture.
 
 Output: `dist/systemcore/ethercat-systemcore_<version>_<kernel>_aarch64.ipk`.
