@@ -1,25 +1,17 @@
-# The IgH EtherCAT Master
+# ec-systemcore
+> [!NOTE]
+> This is unofficial and I am not affiliated with any third party mentioned here.
+> Third party trademarks belong to their original owners, and I do not claim ownership of them.
 
-[[_TOC_]]
+>[!WARNING]
+> This is an alpha, and do not rely on this for safety-critical applications.
+> It is not a safety controller, safety PLC, FSoE implementation, or substitute for certified safety hardware.
+
+Unofficially porting EtherCAT to the Limelight Systemcore.
 
 ## General Information
 
-This is the README.md file of the IgH EtherCAT Master.
-
-This is an open-source EtherCAT master implementation for Linux 2.6 or newer.
-
-See the [features file](FEATURES.md) for a list of features. For more
-information, see [etherlab.org/ethercat](https://etherlab.org/ethercat).
-
-or contact
-
-> Dipl.-Ing. (FH) [Florian Pose](mailto:fp@igh.de)\
-> Ingenieurgemeinschaft IgH\
-> Nordsternstraße 66\
-> D-45329 Essen\
-> [igh.de](http://igh.de)
-
-## Documentation
+TODO: put information here
 
 ### Handbook
 
@@ -89,6 +81,7 @@ recommended (`hdparm -d0 <DEV>`).
 ## License
 
 Copyright (C) 2006-2023  Florian Pose, Ingenieurgemeinschaft IgH
+Copyright (C) 2026-present Another-Person1
 
 This file is part of the IgH EtherCAT Master.
 
