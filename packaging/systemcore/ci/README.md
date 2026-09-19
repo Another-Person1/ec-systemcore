@@ -93,9 +93,12 @@ Locally tested on macOS ARM64 with QEMU 9.0.1 using the checksum-verified beta14
 image and kernel: Linux `6.12.77-v8-16k` booted, image BusyBox/glibc ran, the expected
 kernel release check passed, and the guest powered off with
 `SYSTEMCORE_SMOKE_PASS`. This local run omitted `--stage`, so it did **not** test
-compiled EtherCAT modules. The reported GitHub Actions build reached configuration but failed when its
-generated Makefile tried to run `aclocal-1.15`. CI now regenerates the build
-system in a source copy before configuring, and explicitly selects SDK binutils.
+compiled EtherCAT modules. The latest supplied Actions log confirms autotools
+regeneration, CLI compilation/linking, and library compilation/linking succeeded.
+The kernel build then failed to locate `examples/mini/mini.c` through the separate
+build directory. The SystemCore build now configures inside a disposable source
+copy so Kbuild finds sources beside its generated files. This fixes the layout
+for all modules, rather than merely skipping the first failing example.
 A successful complete SDK build and compiled-module boot still require a new
 Actions run. Alpha14 boot is not locally verified.
 
@@ -147,3 +150,16 @@ release URL. For newly discovered releases, the kernel release is read from the
 verified prepared kernel tree and checked against the image's module directory.
 The completed manifest is included beside the IPK. Push/PR and manual builds
 continue to run regardless of image updates, using the committed pins.
+
+### Kernel module source layout
+
+`build.sh` configures and compiles inside a fresh copy under `output/build.*`.
+The original checkout and the prepared kernel tree are not used as output
+locations. Sources such as `examples/mini/mini.c`, `master/module.c`, and
+`devices/generic.c` are present in the directory passed to Kbuild through `M=`.
+This avoids relying on legacy per-directory `src` overrides to support separate
+source and object trees. Nested output directories are excluded when copying,
+preventing recursive copies. The root output layout and IPK staging paths stay
+the same, and upstream Kbuild templates are unchanged.
+
+See the [Linux 6.12 external-module build documentation](https://docs.kernel.org/6.12/kbuild/modules.html).

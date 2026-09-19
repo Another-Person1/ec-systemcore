@@ -50,7 +50,9 @@ on macOS/Windows use a Linux VM or an appropriately configured Linux container w
 SDK's supported host architecture.
 
 Output: `dist/systemcore/ethercat-systemcore_<version>_<kernel>_aarch64.ipk`.
-Each run retains a unique build/staging directory for inspection. `OUTPUT_DIR`,
+Each run retains a unique source/build/staging directory for inspection.
+The script uses rsync to make a disposable source copy and configures inside it,
+so Linux Kbuild finds C sources beside generated Kbuild files. `OUTPUT_DIR`,
 `JOBS`, and `PACKAGE_VERSION` are optional overrides. No host installation or
 kernel-tree `modules_install` is performed. The build selects generic Ethernet,
 high-resolution timers, and no CPU cycle-counter or Ethernet-over-EtherCAT support.

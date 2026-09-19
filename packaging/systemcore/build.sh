@@ -23,12 +23,20 @@ export LD="${CROSS_COMPILE}ld" AS="${CROSS_COMPILE}as"
 output=${OUTPUT_DIR:-$src/dist/systemcore}
 mkdir -p "$output"
 output=$(cd "$output" && pwd)
+[[ "$output" != "$src" ]] || { echo 'OUTPUT_DIR must not be the source root.' >&2; exit 1; }
 work=$(mktemp -d "$output/build.XXXXXX")
+# Linux Kbuild expects module sources alongside the generated Kbuild files.
+# Configure in a disposable source copy, keeping the original checkout untouched.
+copy_excludes=(--exclude=/.git --exclude=/dist --exclude=__pycache__)
+case "$output/" in
+    "$src/"*) copy_excludes+=(--exclude="/${output#"$src"/}/") ;;
+esac
+rsync -a "${copy_excludes[@]}" "$src/" "$work/"
 echo "Build files: $work"
 cd "$work"
 export CC="${CROSS_COMPILE}gcc" CXX="${CROSS_COMPILE}g++"
 export AR="${CROSS_COMPILE}ar" RANLIB="${CROSS_COMPILE}ranlib" STRIP="${CROSS_COMPILE}strip"
-"$src/configure" --host=aarch64-buildroot-linux-gnu \
+./configure --host=aarch64-buildroot-linux-gnu \
     --prefix=/usr --libdir=/usr/lib --sysconfdir=/etc \
     --with-linux-dir="$KDIR" --with-systemdsystemunitdir=no \
     --disable-initd --enable-generic --disable-8139too --disable-e100 \

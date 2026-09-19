@@ -131,3 +131,5 @@ EXTRA_DIST += packaging/systemcore/ci/README.md \
 
 EXTRA_DIST += packaging/systemcore/ci/check-release.py \
 	packaging/systemcore/tests/test_release.py
+
+EXTRA_DIST += packaging/systemcore/tests/test_build_layout.py
