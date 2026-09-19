@@ -51,6 +51,7 @@ jobs:
           if [[ "$EVENT_NAME" == schedule ]]; then args+=(--scheduled); fi
           python3 packaging/systemcore/ci/check-release.py --variant "$HARDWARE" \
             --output "$RUNNER_TEMP/selected-release.json" "${args[@]}"
+      - name: Check whether this updated image already passed CI
         id: state
         if: github.event_name == 'schedule' && steps.select.outputs.changed == 'true'
         uses: actions/cache/restore@v5
