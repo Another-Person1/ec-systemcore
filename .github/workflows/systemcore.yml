@@ -1,6 +1,9 @@
 name: SystemCore IPK and QEMU boot
 
 on:
+  schedule:
+    - cron: '30 3 * * *'
+      timezone: America/Toronto
   workflow_dispatch:
     inputs:
       hardware:
@@ -29,36 +32,83 @@ defaults:
     shell: bash
 
 jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      should_build: ${{ steps.select.outputs.changed == 'true' && steps.state.outputs.cache-hit != 'true' }}
+      cache_key: ${{ steps.select.outputs.cache_key }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Select pinned assets or check for a new official image
+        id: select
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          HARDWARE: ${{ inputs.hardware || 'beta' }}
+        run: |
+          args=()
+          if [[ "$EVENT_NAME" == schedule ]]; then args+=(--scheduled); fi
+          python3 packaging/systemcore/ci/check-release.py --variant "$HARDWARE" \
+            --output "$RUNNER_TEMP/selected-release.json" "${args[@]}"
+        id: state
+        if: github.event_name == 'schedule' && steps.select.outputs.changed == 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ runner.temp }}/systemcore-image-success
+          key: ${{ steps.select.outputs.cache_key }}
+      - name: Report unchanged image
+        if: steps.select.outputs.changed != 'true' || steps.state.outputs.cache-hit == 'true'
+        run: echo 'Limelight image unchanged or already built successfully; skipping build and boot jobs.'
+      - name: Pass exact release selection to build
+        if: steps.select.outputs.changed == 'true' && steps.state.outputs.cache-hit != 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: selected-release
+          path: ${{ runner.temp }}/selected-release.json
+          if-no-files-found: error
+
   checks:
+    needs: release
+    if: needs.release.outputs.should_build == 'true'
+
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: |
           python3 -m unittest discover -s packaging/systemcore/tests -v
           bash -n packaging/systemcore/build.sh packaging/systemcore/ci/build.sh
           sh -n packaging/systemcore/ethercat-systemcore
 
   build:
-    needs: checks
+    needs: [release, checks]
+    if: needs.release.outputs.should_build == 'true'
     # Limelight SDK and prebuilt kernel build helpers are x86_64 ELF binaries.
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
       HARDWARE: ${{ inputs.hardware || 'beta' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with:
+          name: selected-release
+          path: ${{ runner.temp }}/release-selection
       - name: Install Ubuntu build and image tools
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev \
-            libncurses-dev rsync cpio kmod pkg-config python3 unzip xz-utils e2fsprogs file
+            libncurses-dev rsync cpio kmod pkg-config python3 unzip xz-utils e2fsprogs file \
+            autoconf automake libtool
       - name: Cross-build with the pinned official SDK and prepare boot test
+        env:
+          SYSTEMCORE_RELEASE_MANIFEST: ${{ runner.temp }}/release-selection/selected-release.json
         run: |
           set -o pipefail
           bash packaging/systemcore/ci/build.sh "$RUNNER_TEMP/systemcore" "$HARDWARE" \
             2>&1 | tee "$RUNNER_TEMP/systemcore-build.log"
       - name: Upload IPK and provenance
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ec-systemcore-${{ env.HARDWARE }}-ipk
           if-no-files-found: error
@@ -67,7 +117,7 @@ jobs:
             ${{ runner.temp }}/systemcore/output/release.json
             ${{ runner.temp }}/systemcore/output/build-provenance.txt
       - name: Upload boot test bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: systemcore-boot
           if-no-files-found: error
@@ -78,7 +128,7 @@ jobs:
             ${{ runner.temp }}/systemcore/boot/initramfs.cpio.gz
       - name: Upload build diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: systemcore-build-log
           path: |
@@ -94,8 +144,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
         with:
           name: systemcore-boot
           path: ${{ runner.temp }}/systemcore-boot
@@ -113,9 +163,23 @@ jobs:
             --work "$RUNNER_TEMP/systemcore-boot" --timeout 300
       - name: Upload serial console and QEMU command
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: systemcore-boot-${{ matrix.runner }}
           path: |
             ${{ runner.temp }}/systemcore-boot/console.log
             ${{ runner.temp }}/systemcore-boot/qemu-command.txt
+
+  record-image:
+    needs: [release, boot]
+    if: github.event_name == 'schedule' && needs.release.outputs.should_build == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Record success only after both boot tests pass
+        run: |
+          mkdir -p "$RUNNER_TEMP/systemcore-image-success"
+          echo success > "$RUNNER_TEMP/systemcore-image-success/result"
+      - uses: actions/cache/save@v5
+        with:
+          path: ${{ runner.temp }}/systemcore-image-success
+          key: ${{ needs.release.outputs.cache_key }}

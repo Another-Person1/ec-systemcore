@@ -1,15 +1,21 @@
 # GitHub Actions: SystemCore build and boot test
 
-Run **SystemCore IPK and QEMU boot** from Actions, or push/open a PR. Automatic
-runs target **beta hardware, beta14**. Manual runs can select alpha14 or beta14,
+Run **SystemCore IPK and QEMU boot** from Actions, or push/open a PR. It is also
+scheduled to **check for an updated beta image at 3:30 a.m. America/Toronto**
+each day, adjusting for daylight saving time. An unchanged image skips tests,
+builds, and boot jobs. GitHub runs schedules from the default branch and may delay the start.
+Push/PR runs target the pinned **beta hardware, beta14** release. Manual runs can select alpha14 or beta14,
 and ARM64, x64, or both boot-test runners. The exact Limelight release tags,
 asset names, kernel release, and SHA256 digests are in `releases.json`. This is
-not a moving `latest` download. Select the release that matches your hardware;
+not a moving `latest` download for push/PR/manual builds. Scheduled builds
+resolve the newest published beta CM5 image through Limelight's official API
+and freeze its tag and image/SDK/kernel SHA256 hashes in a per-run manifest. Select the release that matches your hardware;
 these IPKs do not target other installed OS releases.
 
 ## What runs where
 
-1. `ubuntu-24.04` runs host tests, downloads and verifies the official image,
+1. `ubuntu-24.04` runs host tests, regenerates autotools in an isolated source
+   copy with the runner's autoconf/automake/libtool, downloads and verifies the official image,
    kernel archive, and toolchain, relocates the SDK, then cross-compiles the
    modules, CLI and library and creates the IPK. Build helpers in the supplied
    kernel archive are **x86-64 executables**; an ARM64 runner cannot run this SDK
@@ -58,6 +64,9 @@ manager installation and service lifecycle remain on-device acceptance checks.
 - `systemcore-boot-<runner>`: serial console and exact QEMU command.
 
 Use official Ubuntu apt repositories and GitHub's own checkout/artifact actions.
+Checkout v6, upload-artifact v6, download-artifact v7, and cache v5 use Node.js 24.
+These JavaScript actions select their own runtime; this C/C++ build does not
+need a separate setup-node step.
 No third-party VM, Raspberry Pi kernel, rootfs image, or setup-QEMU action is used.
 Ubuntu patch revisions and apt packages evolve; `ubuntu-24.04` standardizes the
 runner distribution but is not an immutable host image. Firmware/SDK asset bytes
@@ -84,9 +93,11 @@ Locally tested on macOS ARM64 with QEMU 9.0.1 using the checksum-verified beta14
 image and kernel: Linux `6.12.77-v8-16k` booted, image BusyBox/glibc ran, the expected
 kernel release check passed, and the guest powered off with
 `SYSTEMCORE_SMOKE_PASS`. This local run omitted `--stage`, so it did **not** test
-compiled EtherCAT modules. No GitHub Actions run or complete SDK build has been
-performed from this workspace. The workflow adds those checks; their results must
-be inspected after pushing it. Alpha14 boot is not locally verified.
+compiled EtherCAT modules. The reported GitHub Actions build reached configuration but failed when its
+generated Makefile tried to run `aclocal-1.15`. CI now regenerates the build
+system in a source copy before configuring, and explicitly selects SDK binutils.
+A successful complete SDK build and compiled-module boot still require a new
+Actions run. Alpha14 boot is not locally verified.
 
 ## Official references
 
@@ -95,3 +106,44 @@ be inspected after pushing it. Alpha14 boot is not locally verified.
 - [QEMU ARM machine compatibility](https://www.qemu.org/docs/master/system/target-arm.html)
 - [QEMU Raspberry Pi board support](https://www.qemu.org/docs/master/system/arm/raspi.html)
 - [GitHub runner availability](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
+
+### Build-system regeneration
+
+The checked-in generated files reference Automake 1.15. Git checkout timestamps
+can make their inputs appear newer, causing `make` to invoke `aclocal-1.15`.
+CI runs `autoreconf --force --install --verbose` in its disposable source copy,
+so generated files consistently reference the installed Ubuntu tool versions.
+It does not hide regeneration failures with no-op commands or timestamp changes.
+The original checkout and its generated files remain unchanged. SDK binutils
+are selected explicitly and added to PATH to avoid host `nm`/`objdump` fallbacks.
+
+- [GitHub scheduling and timezone syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onschedule)
+- [Checkout Node.js runtime](https://github.com/actions/checkout/blob/v6/action.yml)
+- [Upload artifact Node.js runtime](https://github.com/actions/upload-artifact/blob/v6/action.yml)
+- [Download artifact Node.js runtime](https://github.com/actions/download-artifact/blob/v7/action.yml)
+
+### Scheduled image checks
+
+The schedule compares the newest published beta CM5 image's SHA256 against the
+committed baseline in `releases.json`. For a changed image, an exact success-cache
+key prevents rebuilding an image that already passed both QEMU jobs. The cache
+is written only after the full build and boot tests succeed; failed builds are
+retried on the next scheduled check. Checks restore the tiny success marker to
+keep it active. If GitHub evicts or an administrator deletes that cache, the
+updated image is rebuilt once to re-establish its successful state. Updating the
+committed baseline to that verified image makes the skip independent of cache
+retention. No repository files are automatically committed.
+
+No image or SDK downloads occur on unchanged checks. Drafts and alpha images
+are ignored. Beta hardware releases are considered even when GitHub labels them
+prereleases. A new image without matching SDK/kernel assets or official SHA256
+digests fails the check rather than combining different releases. Future asset
+naming changes fail visibly and require adapting the selector. The check examines
+the most recent 100 published release records.
+
+The selected manifest is transferred as an artifact, and `fetch.py` still checks
+every downloaded file against its frozen hash using only the official Limelight
+release URL. For newly discovered releases, the kernel release is read from the
+verified prepared kernel tree and checked against the image's module directory.
+The completed manifest is included beside the IPK. Push/PR and manual builds
+continue to run regardless of image updates, using the committed pins.

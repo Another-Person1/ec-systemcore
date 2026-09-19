@@ -1035,3 +1035,6 @@ EXTRA_DIST += packaging/systemcore/ci/README.md \
 	packaging/systemcore/ci/build.sh \
 	packaging/systemcore/ci/image-smoke.py \
 	packaging/systemcore/tests/test_ci.py
+
+EXTRA_DIST += packaging/systemcore/ci/check-release.py \
+	packaging/systemcore/tests/test_release.py

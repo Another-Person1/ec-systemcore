@@ -12,6 +12,12 @@ KDIR=$(cd "$KDIR" && pwd)
 [[ -s $KDIR/Module.symvers ]] || { echo 'A prepared kernel tree with Module.symvers is required.' >&2; exit 1; }
 grep -qx 'CONFIG_ARM64=y' "$KDIR/.config"
 grep -qx 'CONFIG_MODULES=y' "$KDIR/.config"
+# Autoconf/libtool and Kbuild must find all target binutils, not host fallbacks.
+compiler=$(command -v "${CROSS_COMPILE}gcc")
+export PATH="$(dirname "$compiler"):$PATH"
+export NM="${CROSS_COMPILE}nm" OBJDUMP="${CROSS_COMPILE}objdump"
+export OBJCOPY="${CROSS_COMPILE}objcopy" READELF="${CROSS_COMPILE}readelf"
+export LD="${CROSS_COMPILE}ld" AS="${CROSS_COMPILE}as"
 "${CROSS_COMPILE}gcc" --version
 # Use a fresh directory; never clean a caller-supplied directory recursively.
 output=${OUTPUT_DIR:-$src/dist/systemcore}

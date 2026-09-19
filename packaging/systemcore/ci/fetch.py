@@ -10,8 +10,8 @@ import urllib.request
 BASE = 'https://github.com/LimelightVision/systemcore-os-public/releases/download/'
 
 
-def fetch(variant, directory):
-    manifest = json.loads(Path(__file__).with_name('releases.json').read_text())[variant]
+def fetch(variant, directory, selected_manifest=None):
+    manifest = json.loads(selected_manifest.read_text()) if selected_manifest else json.loads(Path(__file__).with_name('releases.json').read_text())[variant]
     directory.mkdir(parents=True, exist_ok=True)
     for role, asset in manifest['assets'].items():
         for part in (manifest['tag'], asset['name']):
@@ -35,5 +35,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('variant', choices=['alpha', 'beta'])
     parser.add_argument('directory', type=Path)
+    parser.add_argument('--manifest', type=Path)
     args = parser.parse_args()
-    fetch(args.variant, args.directory)
+    fetch(args.variant, args.directory, args.manifest)

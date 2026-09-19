@@ -39,6 +39,10 @@ license text and official project titles when quoting them.
 - Keep release tags, asset names, and SHA256 hashes pinned in
   `packaging/systemcore/ci/releases.json`. Verify downloads and update related
   documentation when changing a target release. Do not silently use `latest`.
+  The daily image-update check is an explicit exception: resolve official release
+  metadata into an immutable per-run tag/asset/hash manifest, verify downloads,
+  and include the completed manifest with the IPK. Preserve unchanged-image
+  skips and record successful images only after all build/boot checks pass.
 - Keep alpha and beta hardware variants distinct. Match the installed OS,
   kernel configuration, symbol versions, and compiler; `uname -r` alone does
   not establish compatibility.

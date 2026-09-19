@@ -42,8 +42,10 @@ SYSTEMCORE_KERNEL_RELEASE='<exact uname -r output>' \
 ```
 
 The host needs the build dependencies listed in Limelight's kernel Dockerfile,
-plus Python 3 and pkg-config. The supplied `configure` script is used directly;
-autotools regeneration is unnecessary. The SDK compiler itself requires Linux;
+plus Python 3 and pkg-config. For a fresh Git checkout, install autoconf,
+automake, and libtool, then run `autoreconf --force --install` before the build
+to avoid timestamp-triggered calls to the old Automake version. The CI wrapper
+does this automatically in an isolated source copy. The SDK compiler itself requires Linux;
 on macOS/Windows use a Linux VM or an appropriately configured Linux container with the
 SDK's supported host architecture.
 
