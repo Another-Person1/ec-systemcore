@@ -1,0 +1,15 @@
+[Unit]
+Description=SystemCore EtherCAT MainDevice
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/ethercat-systemcore start
+ExecStop=/usr/sbin/ethercat-systemcore stop
+TimeoutStartSec=30
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

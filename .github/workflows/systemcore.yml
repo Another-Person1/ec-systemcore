@@ -1,0 +1,121 @@
+name: SystemCore IPK and QEMU boot
+
+on:
+  workflow_dispatch:
+    inputs:
+      hardware:
+        description: SystemCore hardware variant (pinned alpha14/beta14 release)
+        type: choice
+        options: [beta, alpha]
+        default: beta
+      smoke_runners:
+        description: Boot test hosts (x64 fallback if ARM64 runners are unavailable)
+        type: choice
+        options: [both, arm64, x64]
+        default: both
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: systemcore-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          python3 -m unittest discover -s packaging/systemcore/tests -v
+          bash -n packaging/systemcore/build.sh packaging/systemcore/ci/build.sh
+          sh -n packaging/systemcore/ethercat-systemcore
+
+  build:
+    needs: checks
+    # Limelight SDK and prebuilt kernel build helpers are x86_64 ELF binaries.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      HARDWARE: ${{ inputs.hardware || 'beta' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Ubuntu build and image tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev \
+            libncurses-dev rsync cpio kmod pkg-config python3 unzip xz-utils e2fsprogs file
+      - name: Cross-build with the pinned official SDK and prepare boot test
+        run: |
+          set -o pipefail
+          bash packaging/systemcore/ci/build.sh "$RUNNER_TEMP/systemcore" "$HARDWARE" \
+            2>&1 | tee "$RUNNER_TEMP/systemcore-build.log"
+      - name: Upload IPK and provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: ec-systemcore-${{ env.HARDWARE }}-ipk
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/systemcore/output/*.ipk
+            ${{ runner.temp }}/systemcore/output/release.json
+            ${{ runner.temp }}/systemcore/output/build-provenance.txt
+      - name: Upload boot test bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: systemcore-boot
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            ${{ runner.temp }}/systemcore/boot/Image
+            ${{ runner.temp }}/systemcore/boot/kernel-release
+            ${{ runner.temp }}/systemcore/boot/initramfs.cpio.gz
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: systemcore-build-log
+          path: |
+            ${{ runner.temp }}/systemcore-build.log
+            ${{ runner.temp }}/systemcore/output/build.*/config.log
+
+  boot:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: ${{ fromJSON(inputs.smoke_runners == 'x64' && '["ubuntu-24.04"]' || inputs.smoke_runners == 'arm64' && '["ubuntu-24.04-arm"]' || '["ubuntu-24.04-arm","ubuntu-24.04"]') }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: systemcore-boot
+          path: ${{ runner.temp }}/systemcore-boot
+      - name: Install official Ubuntu QEMU package
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-arm
+          qemu-system-aarch64 --version
+          qemu-system-aarch64 -machine help
+      - name: Boot official kernel and image userspace; exercise EtherCAT modules and CLI
+        run: |
+          python3 packaging/systemcore/ci/image-smoke.py --boot-only \
+            --kernel "$RUNNER_TEMP/systemcore-boot/Image" \
+            --release "$(cat "$RUNNER_TEMP/systemcore-boot/kernel-release")" \
+            --work "$RUNNER_TEMP/systemcore-boot" --timeout 300
+      - name: Upload serial console and QEMU command
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: systemcore-boot-${{ matrix.runner }}
+          path: |
+            ${{ runner.temp }}/systemcore-boot/console.log
+            ${{ runner.temp }}/systemcore-boot/qemu-command.txt

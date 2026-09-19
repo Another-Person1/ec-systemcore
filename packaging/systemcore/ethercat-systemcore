@@ -1,0 +1,41 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+set -eu
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+fail() { echo "ethercat-systemcore: $*" >&2; exit 1; }
+case "${1:-}" in
+start)
+    . /etc/ethercat-systemcore.conf
+    interface=${INTERFACE:-}
+    case "$interface" in ''|*[!a-zA-Z0-9_.:-]*) fail 'Set INTERFACE in /etc/ethercat-systemcore.conf to a dedicated Ethernet interface.' ;; esac
+    [ "$(uname -r)" = "$(cat /usr/share/ethercat-systemcore/kernel-release)" ] || fail 'Kernel changed; rebuild/reinstall the matching IPK.'
+    [ -d "/sys/class/net/$interface" ] || fail "Interface $interface is absent."
+    [ "$(cat "/sys/class/net/$interface/type")" = 1 ] || fail 'Ethernet interface required.'
+    [ ! -d "/sys/class/net/$interface/wireless" ] || fail 'Wi-Fi cannot carry EtherCAT.'
+    [ ! -e "/sys/class/net/$interface/master" ] || fail 'Use an interface outside bridges/bonds.'
+    addresses=$(ip -o address show dev "$interface" scope global)
+    [ -z "$addresses" ] || fail 'Selected interface has an IP address; dedicate it to EtherCAT first.'
+    routes=$(ip route show default dev "$interface")
+    routes6=$(ip -6 route show default dev "$interface")
+    [ -z "$routes$routes6" ] || fail 'Selected interface has a default route.'
+    [ ! -d /sys/module/ec_master ] || fail 'ec_master is already loaded; stop its owner first.'
+    mac=$(cat "/sys/class/net/$interface/address")
+    [ "$mac" != 00:00:00:00:00:00 ] || fail 'Refusing wildcard MAC address.'
+    ip link set dev "$interface" up
+    modprobe ec_master main_devices="$mac"
+    if ! modprobe ec_generic; then
+        modprobe -r ec_master
+        fail 'Cannot load ec_generic.'
+    fi
+    ;;
+stop)
+    # Refuse to stop if a robot application still holds the MainDevice open.
+    modprobe -r ec_generic
+    modprobe -r ec_master
+    ;;
+status)
+    exec /usr/bin/ethercat master
+    ;;
+*) fail 'Usage: ethercat-systemcore {start|stop|status}' ;;
+esac

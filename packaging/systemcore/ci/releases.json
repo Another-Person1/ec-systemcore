@@ -1,0 +1,38 @@
+{
+  "beta": {
+    "tag": "limelightosr-2027.0.0-beta14-210",
+    "kernel_release": "6.12.77-v8-16k",
+    "assets": {
+      "image": {
+        "name": "limelightsystemcorebetacm5-limelightosr-2027.0.0-beta14.zip",
+        "sha256": "b7c4230b7a959e7fb7e100c6de1df4a925309c502bd315951e80ef983f5f5f73"
+      },
+      "toolchain": {
+        "name": "systemcorebeta-aarch64-toolchain.tar.gz",
+        "sha256": "c9af7a82753a7473b8baab1cd63af2ca54e7bc47035f19e9bb8c31556421908a"
+      },
+      "kernel": {
+        "name": "systemcorebetalinux.tar.xz",
+        "sha256": "1a460667c92651555ed039b1466e4bad52a5ec2acbe8e3e525c786d37e7370cd"
+      }
+    }
+  },
+  "alpha": {
+    "tag": "limelightosr-2027.0.0-alpha14-380",
+    "kernel_release": "6.12.77-v8-16k",
+    "assets": {
+      "image": {
+        "name": "limelightsystemcorecm5-limelightosr-2027.0.0-alpha14.zip",
+        "sha256": "5ef6a95b30a4d103f85071c8f5961797a633a91611d07e093c25f92ec6eeaa55"
+      },
+      "toolchain": {
+        "name": "systemcore-aarch64-toolchain.tar.gz",
+        "sha256": "c97a086129082b397414a6c7963dfba17a95cfd621cac851919ad6213497c802"
+      },
+      "kernel": {
+        "name": "systemcorelinux.tar.xz",
+        "sha256": "a1e33986965cef76f5a1f654fcf836df4f3510e899e9203c8a565f7de810eddd"
+      }
+    }
+  }
+}

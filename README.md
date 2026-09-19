@@ -60,6 +60,11 @@ the EtherCAT master.
 A table of supported hardware can be found at
 [docs.etherlab.org](https://docs.etherlab.org/ethercat/1.6/doxygen/devicedrivers.html).
 
+## SystemCore (FRC bring-up)
+
+See [the SystemCore build and IPK guide](packaging/systemcore/README.md) for
+the ARM64 build profile, dedicated-interface setup, and validation limits.
+
 ## Building and installing
 
 See the [install file](INSTALL.md).

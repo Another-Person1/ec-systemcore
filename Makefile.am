@@ -111,3 +111,20 @@ cleandoc:
 	@rm -rf doxygen-output generated_table.md device_drivers.md
 
 #-----------------------------------------------------------------------------
+
+# SystemCore build profile and IPK packaging
+EXTRA_DIST += packaging/systemcore/README.md \
+	packaging/systemcore/build.sh \
+	packaging/systemcore/package.py \
+	packaging/systemcore/ethercat-systemcore \
+	packaging/systemcore/ethercat-systemcore.conf \
+	packaging/systemcore/ethercat-systemcore.service \
+	packaging/systemcore/tests/test_package.py \
+	packaging/systemcore/tests/test_service.py
+
+EXTRA_DIST += packaging/systemcore/ci/README.md \
+	packaging/systemcore/ci/releases.json \
+	packaging/systemcore/ci/fetch.py \
+	packaging/systemcore/ci/build.sh \
+	packaging/systemcore/ci/image-smoke.py \
+	packaging/systemcore/tests/test_ci.py
