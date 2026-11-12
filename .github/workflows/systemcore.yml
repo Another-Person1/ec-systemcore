@@ -17,7 +17,7 @@ jobs:
     env:
       SC_CACHE: ${{ github.workspace }}/.sc-cache
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Install build dependencies
@@ -27,20 +27,20 @@ jobs:
             build-essential bc bison flex libssl-dev libelf-dev libncurses-dev \
             rsync cpio kmod autoconf automake libtool pkg-config git curl ca-certificates \
             xz-utils file
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: .sc-cache/downloads
           key: systemcore-downloads-${{ matrix.variant }}-${{ hashFiles('systemcore/releases.env') }}
       - name: Build IPK
         run: SC_WORK="$RUNNER_TEMP/ec-systemcore-work" bash systemcore/build.sh ${{ matrix.variant }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ethercat-igh-${{ matrix.variant }}
           path: dist/*.ipk
           if-no-files-found: error
       - name: Upload failure logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-logs-${{ matrix.variant }}
           path: |
