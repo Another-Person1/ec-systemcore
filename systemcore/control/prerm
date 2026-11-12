@@ -1,0 +1,14 @@
+#!/bin/sh
+systemctl stop ethercat.service || true
+loaded=
+for module in ec_master ec_generic; do
+    if [ -d "/sys/module/$module" ]; then
+        echo "ethercat-igh: $module is still loaded after stopping ethercat.service; refusing removal." >&2
+        loaded=yes
+    fi
+done
+[ -z "$loaded" ] || exit 1
+if [ "${1-}" != upgrade ]; then
+    systemctl disable ethercat.service || true
+fi
+exit 0

@@ -1,0 +1,11 @@
+Package: ethercat-igh
+Version: @VERSION@
+Architecture: all
+Section: development
+Priority: optional
+Maintainer: ec-systemcore
+Source: local
+Description: IgH EtherCAT master for Systemcore @VARIANT@ hardware and kernel @KREL@
+X-Has-UI: false
+X-Auto-Start: false
+X-Services: ethercat.service

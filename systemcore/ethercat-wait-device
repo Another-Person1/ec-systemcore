@@ -1,0 +1,28 @@
+#!/bin/sh
+. /etc/ethercat.conf
+
+# Let ethercatctl diagnose an unconfigured master.
+[ -n "${MASTER0_DEVICE:-}" ] || exit 0
+wait_seconds=${ETHERCAT_WAIT_SECONDS:-30}
+case "$wait_seconds" in
+    *[!0-9]*|'')
+        echo 'ethercat-wait-device: ETHERCAT_WAIT_SECONDS must be a non-negative integer.' >&2
+        exit 1
+        ;;
+esac
+device=$(printf '%s' "$MASTER0_DEVICE" | tr '[:upper:]' '[:lower:]')
+elapsed=0
+while :; do
+    for entry in /sys/class/net/*; do
+        [ -e "$entry" ] || continue
+        [ "${entry##*/}" != "$MASTER0_DEVICE" ] || exit 0
+        [ -r "$entry/address" ] || continue
+        address=$(tr '[:upper:]' '[:lower:]' < "$entry/address")
+        [ "$address" != "$device" ] || exit 0
+    done
+    [ "$elapsed" -lt "$wait_seconds" ] || break
+    sleep 1
+    elapsed=$((elapsed + 1))
+done
+echo "ethercat-wait-device: timed out after $wait_seconds seconds waiting for MASTER0_DEVICE '$MASTER0_DEVICE' in /sys/class/net." >&2
+exit 1

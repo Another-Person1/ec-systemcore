@@ -1,0 +1,4 @@
+#!/bin/sh
+depmod -a '@KREL@' || true
+systemctl daemon-reload || true
+exit 0

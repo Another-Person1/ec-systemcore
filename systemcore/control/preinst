@@ -1,0 +1,10 @@
+#!/bin/sh
+if [ "$(uname -r)" != '@KREL@' ]; then
+    echo 'ethercat-igh requires kernel @KREL@; install the package matching this OS release.' >&2
+    exit 1
+fi
+if [ -d /sys/module/ec_master ]; then
+    echo 'ec_master is loaded. Stop ethercat.service first: systemctl stop ethercat.service' >&2
+    exit 1
+fi
+exit 0

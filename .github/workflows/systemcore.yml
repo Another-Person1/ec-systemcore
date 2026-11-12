@@ -1,0 +1,49 @@
+name: Systemcore IPK
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [alpha, beta]
+    env:
+      SC_CACHE: ${{ github.workspace }}/.sc-cache
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential bc bison flex libssl-dev libelf-dev libncurses-dev \
+            rsync cpio kmod autoconf automake libtool pkg-config git curl ca-certificates \
+            xz-utils file
+      - uses: actions/cache@v4
+        with:
+          path: .sc-cache/downloads
+          key: systemcore-downloads-${{ matrix.variant }}-${{ hashFiles('systemcore/releases.env') }}
+      - name: Build IPK
+        run: SC_WORK="$RUNNER_TEMP/ec-systemcore-work" bash systemcore/build.sh ${{ matrix.variant }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ethercat-igh-${{ matrix.variant }}
+          path: dist/*.ipk
+          if-no-files-found: error
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-${{ matrix.variant }}
+          path: |
+            ${{ runner.temp }}/ec-systemcore-work/**/config.log
+            ${{ runner.temp }}/ec-systemcore-work/**/build.log
+          if-no-files-found: warn

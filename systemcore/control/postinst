@@ -1,0 +1,6 @@
+#!/bin/sh
+depmod -a '@KREL@' || exit 1
+udevadm control --reload || true
+systemctl daemon-reload || exit 1
+echo 'Edit /etc/ethercat.conf, then run: systemctl enable --now ethercat.service'
+exit 0
