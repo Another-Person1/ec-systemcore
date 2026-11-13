@@ -14,7 +14,8 @@ Limelight OS). The package ships the `ec_master` and `ec_generic` kernel modules
 ## Rules
 
 - Do not modify upstream sources, `Kbuild.in`, `Makefile.am`, `configure.ac` or `script/`.
-  All Systemcore work lives in `systemcore/`, `.github/workflows/systemcore.yml` and this file.
+  All Systemcore work lives in `systemcore/`, `.github/workflows/systemcore.yml`,
+  `systemcore-porting.md` and this file.
 - Files under `systemcore/` must have LF line endings (enforced by `.gitattributes`).
   Scripts that run on the target (`control/*`, `ethercat-wait-device`) are POSIX `sh`;
   `build.sh` is `bash`.
@@ -41,6 +42,7 @@ Limelight OS). The package ships the `ec_master` and `ec_generic` kernel modules
 | `systemcore/ethercat-wait-device`, `10-systemcore.conf` | Waits for the configured adapter before the service starts |
 | `systemcore/Dockerfile`, `docker-build.ps1` | Local build on Windows through Docker Desktop |
 | `.github/workflows/systemcore.yml` | Builds both variants and uploads the IPKs |
+| `systemcore-porting.md` | Generic, project-independent guide to building IPKs for Systemcore; keep it free of references to this repository |
 
 ## How the build works (things that are easy to break)
 
@@ -82,5 +84,5 @@ Keep these evidence levels separate when describing results:
 3. Installation and operation on a physical Systemcore: package manager accepts the IPK,
    modules load, service starts, `ethercat master` / `ethercat slaves` work.
 
-As of the initial packaging commit, levels 1 and 2 are done for release 18 (alpha and beta,
-kernel `6.12.112-v8-16k`). Level 3 has not been done.
+As of 2026-11-12, levels 1 and 2 are done for release 18 (alpha and beta, kernel
+`6.12.112-v8-16k`), both locally in Docker and in GitHub Actions. Level 3 has not been done.
